@@ -14,27 +14,18 @@ namespace det {
 		if ( pid_snap.get( ) == INVALID_HANDLE_VALUE || GetLastError( ) == ERROR_BAD_LENGTH ) return pids;
 		if ( !Process32First( pid_snap.get( ), &proc_entry ) ) return pids;
 
-		do {
-			if (!lstrcmpW(proc_entry.szExeFile, prcs)) { pids.emplace_back(proc_entry.th32ProcessID); return pids; }
-		} while ( Process32Next( pid_snap.get( ), &proc_entry ) );
-		
+		do { if (!lstrcmpW(proc_entry.szExeFile, prcs)) { pids.emplace_back(proc_entry.th32ProcessID); return pids; } } while ( Process32Next( pid_snap.get( ), &proc_entry ) );	
 		return pids;
 	}
 
 	auto get_base( ::std::uint64_t prcs_id, LPCWSTR prcs_mod ) -> ::std::uintptr_t const {
 		unique_handle mod_snap( CreateToolhelp32Snapshot( TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, prcs_id ) );
-
-		if ( mod_snap.get( ) == INVALID_HANDLE_VALUE ) return NULL;
-
 		MODULEENTRY32 mod_entry; mod_entry.dwSize = sizeof(MODULEENTRY32);
-
+		
+		if ( mod_snap.get( ) == INVALID_HANDLE_VALUE || GetLastError( ) == ERROR_BAD_LENGTH ) return NULL;
 		if ( !Module32First( mod_snap.get( ), &mod_entry ) ) return NULL;
 
-		do {
-			if ( !lstrcmpW( mod_entry.szModule, prcs_mod )  )
-				return reinterpret_cast<::std::uintptr_t>( mod_entry.modBaseAddr );
-		} while ( Module32Next( mod_snap.get( ), &mod_entry ) );
-
+		do { if ( !lstrcmpW( mod_entry.szModule, prcs_mod )  ) return reinterpret_cast<::std::uintptr_t>( mod_entry.modBaseAddr ); } while ( Module32Next( mod_snap.get( ), &mod_entry ) );
 		return NULL;
 	}
 
